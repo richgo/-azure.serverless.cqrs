@@ -1,0 +1,36 @@
+﻿{
+  "type": "object",
+  "properties": {
+    "id": { "type": "string" },
+    "command_name": { "type": "string" },
+    "received": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "location_name": {
+          "type": "string",
+          "required": true
+        },
+        "supercharger_type": {
+          "type": "string",
+          "required": true
+        },
+        "supercharger_serial": {
+          "type": "string",
+          "required": true
+        },
+        "lat": {
+          "type": "number",
+          "required": true
+        },
+        "long": {
+          "type": "number",
+          "required": true
+        }
+      }
+    }
+  }
+}

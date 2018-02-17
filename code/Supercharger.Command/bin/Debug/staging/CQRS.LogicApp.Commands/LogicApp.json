@@ -1,0 +1,328 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "logicAppName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "metadata": {
+        "description": "Supercharger commands"
+      }
+    },
+    "logicAppLocation": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "allowedValues": [
+        "[resourceGroup().location]",
+        "eastasia",
+        "southeastasia",
+        "centralus",
+        "eastus",
+        "eastus2",
+        "westus",
+        "northcentralus",
+        "southcentralus",
+        "northeurope",
+        "westeurope",
+        "japanwest",
+        "japaneast",
+        "brazilsouth",
+        "australiaeast",
+        "australiasoutheast",
+        "southindia",
+        "centralindia",
+        "westindia",
+        "canadacentral",
+        "canadaeast",
+        "uksouth",
+        "ukwest",
+        "westcentralus",
+        "westus2"
+      ],
+      "metadata": {
+        "description": "Location of the Logic App."
+      }
+    },
+    "documentdb_1_Connection_Name": {
+      "type": "string",
+      "defaultValue": "documentdb"
+    },
+    "documentdb_1_Connection_DisplayName": {
+      "type": "string",
+      "defaultValue": "cqrs"
+    },
+    "documentdb_1_databaseAccount": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the account without 'documents.azure.com' part"
+      },
+      "defaultValue": "cqrs"
+    },
+    "documentdb_1_accessKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Primary or Secondary Key"
+      }
+    },
+    "azureeventgrid_1_Connection_Name": {
+      "type": "string",
+      "defaultValue": "azureeventgrid"
+    },
+    "azureeventgrid_1_Connection_DisplayName": {
+      "type": "string",
+      "defaultValue": "live.com#richard_gobbett@hotmail.com"
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "name": "[parameters('logicAppName')]",
+      "type": "Microsoft.Logic/workflows",
+      "location": "[parameters('logicAppLocation')]",
+      "tags": {
+        "displayName": "LogicApp"
+      },
+      "apiVersion": "2016-06-01",
+      "properties": {
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "actions": {
+            "Parse_JSON": {
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@triggerBody()",
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "command_name": {
+                      "type": "string"
+                    },
+                    "received": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "command": {
+                      "type": "object",
+                      "properties": {
+                        "defribilator_serial": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "runAfter": {}
+            },
+            "Switch": {
+              "type": "Switch",
+              "expression": "@body('Parse_JSON')?['command_name']",
+              "cases": {
+                "Case": {
+                  "case": "installed",
+                  "actions": {
+                    "Parse_JSON_2": {
+                      "type": "ParseJson",
+                      "inputs": {
+                        "content": "@body('Parse_JSON')",
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "command_name": {
+                              "type": "string"
+                            },
+                            "received": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "command": {
+                              "type": "object",
+                              "properties": {
+                                "location_name": {
+                                  "type": "string"
+                                },
+                                "supercharger_type": {
+                                  "type": "string"
+                                },
+                                "supercharger_serial": {
+                                  "type": "string"
+                                },
+                                "lat": {
+                                  "type": "number"
+                                },
+                                "long": {
+                                  "type": "number"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "runAfter": {}
+                    }
+                  }
+                },
+                "Case_2": {
+                  "case": "serviced",
+                  "actions": {}
+                },
+                "Case_3": {
+                  "case": "inuse",
+                  "actions": {}
+                },
+                "Case_4": {
+                  "case": "notinuse",
+                  "actions": {}
+                },
+                "Case_5": {
+                  "case": "moved",
+                  "actions": {}
+                },
+                "Case_6": {
+                  "case": "decommisioned",
+                  "actions": {}
+                }
+              },
+              "default": {
+                "actions": {
+                  "Response": {
+                    "type": "Response",
+                    "inputs": {
+                      "statusCode": 444,
+                      "headers": {
+                        "Content-Type": "application/text"
+                      },
+                      "body": "Invalid command recieved"
+                    },
+                    "runAfter": {}
+                  }
+                }
+              },
+              "runAfter": {
+                "Parse_JSON": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Create_or_update_document": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['documentdb']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "body": "@body('Parse_JSON_2')",
+                "headers": {
+                  "x-ms-documentdb-partitionkey": "/eventstore",
+                  "x-ms-documentdb-is-upsert": false
+                },
+                "path": "/dbs/@{encodeURIComponent('cqrs')}/colls/@{encodeURIComponent('supercharger')}/docs"
+              },
+              "runAfter": {
+                "Switch": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "HTTP": {
+              "type": "Http",
+              "inputs": {
+                "method": "POST",
+                "uri": "https://cqrsevent.northeurope-1.eventgrid.azure.net/api/events",
+                "headers": {
+                  "aeg-sas-token": "rwTQZru7jE39ybiZQVqvMhryc+TcCb0jJytxzXYIE3E=",
+                  "Content-Type": "application/json"
+                },
+                "body": "@body('Parse_JSON_2')"
+              },
+              "runAfter": {
+                "Create_or_update_document": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Response_2": {
+              "type": "Response",
+              "inputs": {
+                "statusCode": 200,
+                "headers": {
+                  "Content-Type": "application/text"
+                },
+                "body": "command added to enventstore"
+              },
+              "runAfter": {
+                "HTTP": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "parameters": {
+            "$connections": {
+              "defaultValue": {},
+              "type": "Object"
+            }
+          },
+          "triggers": {
+            "manual": {
+              "type": "Request",
+              "kind": "Http",
+              "inputs": {
+                "schema": {},
+                "method": "POST"
+              }
+            }
+          },
+          "contentVersion": "1.0.0.0",
+          "outputs": {}
+        },
+        "parameters": {
+          "$connections": {
+            "value": {
+              "documentdb": {
+                "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'documentdb')]",
+                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('documentdb_1_Connection_Name'))]",
+                "connectionName": "[parameters('documentdb_1_Connection_Name')]"
+              }
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/connections', parameters('documentdb_1_Connection_Name'))]"
+      ]
+    },
+    {
+      "type": "MICROSOFT.WEB/CONNECTIONS",
+      "apiVersion": "2016-06-01",
+      "name": "[parameters('documentdb_1_Connection_Name')]",
+      "location": "[parameters('logicAppLocation')]",
+      "properties": {
+        "api": {
+          "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'documentdb')]"
+        },
+        "displayName": "[parameters('documentdb_1_Connection_DisplayName')]",
+        "parameterValues": {
+          "databaseAccount": "[parameters('documentdb_1_databaseAccount')]",
+          "accessKey": "[parameters('documentdb_1_accessKey')]"
+        }
+      }
+    },
+    {
+      "type": "MICROSOFT.WEB/CONNECTIONS",
+      "apiVersion": "2016-06-01",
+      "name": "[parameters('azureeventgrid_1_Connection_Name')]",
+      "location": "[parameters('logicAppLocation')]",
+      "properties": {
+        "api": {
+          "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'azureeventgrid')]"
+        },
+        "displayName": "[parameters('azureeventgrid_1_Connection_DisplayName')]"
+      }
+    }
+  ],
+  "outputs": {}
+}

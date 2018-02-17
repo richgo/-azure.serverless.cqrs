@@ -1,0 +1,12 @@
+﻿{
+  "id" :  "",
+  "command_name": "install",
+  "received": "2018-01-01T00:00:00.000Z",
+  "data": {
+    "location_name": "Bath Spa",
+    "supercharger_type": "mk1",
+    "supercharger_serial": "sc0001",
+    "lat": 4.56,
+    "long": 1.23
+  }
+}

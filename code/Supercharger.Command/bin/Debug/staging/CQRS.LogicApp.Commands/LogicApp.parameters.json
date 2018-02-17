@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "logicAppName": {
+      "value": "Command.Supercharger"
+    },
+    "documentdb_1_accessKey": {
+      "value": "DfEkAahDqpZBRncJfyyfd22LUO8nOtU3yw9X5yhX1XZByp8gtqo67WN3YjDT2jivgoxsMVoWMUmZCmLAKs3B7w=="
+    }
+  }
+}

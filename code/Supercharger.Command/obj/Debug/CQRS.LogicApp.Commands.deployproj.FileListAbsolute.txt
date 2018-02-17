@@ -1,0 +1,1 @@
+C:\Dev\richgo\azure.serverless.cqrs\code\CQRS.LogicApp.Commands\obj\Debug\CQRS.LogicApp.Commands.deployproj.CoreCompileInputs.cache
